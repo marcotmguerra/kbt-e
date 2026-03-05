@@ -1,0 +1,392 @@
+/* /public/css/base.css */
+
+
+:root{
+  --primario: #400c88; 
+  --bg-claro:#f6f7f8; 
+  --texto:#111418;
+  --texto-fraco: #404244;; 
+  --borda:#e5e7eb; 
+  --card:#ffffff;
+  --ok:#16a34a; 
+  --erro:#ef4444;
+}
+
+
+/* RESET simples */
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+body{ margin: 0; }
+
+/* centralizar tela (login) */
+.centralizado{
+  min-height: 100vh;          /* pega toda altura da tela */
+  display: flex;              /* liga flexbox */
+  align-items: center;        /* centraliza vertical */
+  justify-content: center;    /* centraliza horizontal */
+  padding: 24px;
+}
+
+/* card genérico */
+.card{
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.10);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* inputs */
+label{
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 800;
+  font-size: 12px;
+  color: rgba(0,0,0,.65);
+}
+
+input, select{
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.14);
+  outline: none;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+input:focus, select:focus{
+  border-color: var(--primario);                /* muda a cor da borda no foco */
+  box-shadow: 0 0 0 4px rgba(19,127,236,.15);
+}
+
+/* botão padrão */
+button{
+  width: auto;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--primario);   /* muda cor do botão aqui */
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  transition: filter .12s ease, transform .12s ease;
+}
+
+button:hover{
+  filter: brightness(.92);  /* < 1 escurece */
+  transform: translateY(-1px);
+}
+
+button:active{
+  transform: translateY(0);
+  filter: brightness(.88);
+}
+
+button:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.logo-icon {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+
+
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.logo-box {
+  width: 70px;
+  height: 70px;
+  background: var(--primario);
+  border-radius: 16px; /* arredonda o quadrado */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.logo2-icon {
+  width: 60px;
+  height: auto;
+}
+
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.toast {
+  background: #fff;
+  color: var(--texto);
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 6px solid var(--primario);
+  animation: slideIn 0.3s ease-out forwards;
+  min-width: 300px;
+}
+.toast--sucesso { border-left-color: var(--ok); }
+.toast--erro { border-left-color: var(--erro); }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* --- Ajuste Final da Logo para ficar idêntica ao Admin --- */
+.brand__icone {
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 12px;
+  background: var(--primario);
+  color: #fff;
+  display: flex;           /* Mudando de grid para flex para melhor centralização */
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;         /* Impede que o box amasse se o texto for grande */
+}
+
+.brand__icone .logo-icon {
+  width: 35px !important;  /* Tamanho ideal para não encostar nas bordas do box */
+  height: 35px !important;
+  object-fit: contain;
+  padding: 0;              /* Remove paddings que possam estar diminuindo a imagem */
+  margin: 0;
+}
+
+select {
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: 'Inter', sans-serif;
+  color: var(--texto);
+}
+
+select:focus {
+  border-color: var(--primario) !important;
+}
+
+/* Ajuste na coluna de ações para os botões não ficarem colados */
+.tabela__acao button {
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.tabela__acao button:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+/* BANNER PWA ESTILO GLOBO */
+.pwa-banner {
+  position: fixed !important;
+  bottom: -100%; /* Começa escondido abaixo da tela */
+  left: 0;
+  width: 100%;
+  background-color: #ffffff !important;
+  z-index: 999999 !important;
+  padding: 20px;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+  transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex; 
+  flex-direction: column;
+  visibility: hidden; /* Fica invisível mas ocupa espaço (fora da tela) */
+}
+
+/* Classe ativada pelo JS */
+.pwa-banner.show {
+  visibility: visible !important;
+  bottom: 0 !important;
+}
+
+.pwa-content {
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.pwa-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.pwa-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  background-color: var(--primario)
+}
+
+.pwa-text strong {
+  display: block;
+  font-size: 16px;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.pwa-text p {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.pwa-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-pwa-primary, .btn-pwa-secondary {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s;
+}
+
+.btn-pwa-primary { 
+  background: var(--primario); 
+  color: white; 
+}
+
+.btn-pwa-secondary { 
+  background: #f1f5f9; 
+  color: #64748b; 
+}
+
+.btn-pwa-primary:active, .btn-pwa-secondary:active {
+  transform: scale(0.96);
+}
+
+.lembrar-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  cursor: pointer;
+}
+
+.lembrar-box input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primario); /* Usa o roxo do seu tema */
+  cursor: pointer;
+}
+
+.lembrar-box label {
+  font-size: 14px;
+  color: var(--texto-fraco);
+  font-weight: 500;
+  margin: 0; /* Remove margens extras do label padrão */
+  cursor: pointer;
+}
+
+
+/* ===============================
+   MENU MOBILE PADRÃO (GLOBAL)
+   =============================== */
+
+.nav-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  height: 64px;
+  background: var(--card);
+  border-top: 1px solid var(--borda);
+
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+
+  z-index: 999;
+}
+
+.nav-mobile__item {
+  flex: 1;
+  text-decoration: none;
+  color: var(--texto-fraco);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 10px;
+  font-weight: 900;
+  gap: 4px;
+}
+
+.nav-mobile__item i {
+  width: 20px;
+  height: 20px;
+  color: var(--texto-fraco);
+}
+
+.nav-mobile__item--ativo,
+.nav-mobile__item--ativo i {
+  color: var(--primario);
+  transform: translateY(-2px);
+}
+
+/* Espaço para não esconder conteúdo */
+body.com-menu-mobile {
+  padding-bottom: 72px;
+}
+
+/* Desktop NÃO mostra menu mobile */
+@media (min-width: 769px) {
+  .nav-mobile {
+    display: none;
+  }
+}
+
+/* Inspirado no home.css */
+.stat-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px; /* Bordas bem arredondadas como no iOS */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.stat-card:active {
+  transform: scale(0.96); /* Feedback de clique de app */
+}

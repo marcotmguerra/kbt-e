@@ -11,6 +11,7 @@ import AdminAgenda from './pages/AdminAgenda';
 import AdminPosAula from './pages/AdminPosAula';
 import AdminReports from './pages/AdminReports';
 import StudentDetail from './pages/StudentDetail';
+import React from 'react'
 
 function App() {
   return (

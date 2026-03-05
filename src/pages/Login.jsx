@@ -40,7 +40,7 @@ export default function Login() {
       <main className="card">
         <div className="card-header">
           <div className="logo-box">
-            <img src="/img/KBT_logo2.png" alt="Logo KBT" className="logo2-icon" />
+            <img src="/assets/KBT_logo2.png" alt="Logo KBT" className="logo2-icon" />
           </div>
           <p className="subtitle">Sistema de Aulas Experimentais</p>
         </div>

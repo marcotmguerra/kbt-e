@@ -28,7 +28,7 @@ export default function Sidebar() {
         {/* Brand / Logo */}
         <div className="brand">
           <div className="brand__icone">
-            <img src="src/assets/KBT_logo2.png" alt="Logo KBT" className="logo-icon" />
+            <img src="/src/assets/KBT_logo2.png" alt="Logo KBT" className="logo-icon" />
           </div>
           <div className="brand__texto">
             <h1 className="brand__titulo">SAE</h1>

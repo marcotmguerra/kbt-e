@@ -3,7 +3,7 @@ import { supabase } from '../services/supabase';
 import { formatarDataBR } from '../utils/formatters';
 import { 
   Search, 
-  CalendarMonth, 
+  Calendar, 
   TrendingUp, 
   Download, 
   RotateCcw, 

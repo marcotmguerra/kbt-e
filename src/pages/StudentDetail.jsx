@@ -4,7 +4,7 @@ import { supabase } from '../services/supabase';
 import { formatarDataBR, linkWhatsApp } from '../utils/formatters';
 import { 
   ArrowLeft, MessageCircle, Save, FileText, 
-  CheckCircle, XCircle, Calendar, Dumbbell, Smartphone 
+  CheckCircle, XCircle, Calendar, Dumbbell, Smartphone, Star
 } from 'lucide-react';
 
 const INSIGHTS_RELATORIO = {
@@ -37,210 +37,196 @@ export default function StudentDetail() {
     const [progManual, setProgManual] = useState('');
 
     useEffect(() => {
-        fetchDados();
+        if (id) fetchDados();
     }, [id]);
 
     async function fetchDados() {
-        const { data, error } = await supabase.from("agendamentos").select("*, profiles(nome)").eq("id", id).single();
-        if (data) {
-            setAg(data);
-            if (data.relatorio_vivencia) {
-                setCategoria(data.relatorio_vivencia.categoria || 'adulto');
-                setNotas(data.relatorio_vivencia.notas || {});
-                setAnalise(data.relatorio_vivencia.traducao || '');
-                setRecomendacaoAuto(data.relatorio_vivencia.recomendacao_auto || '');
-                setProgManual(data.relatorio_vivencia.recomendacao_manual || '');
+        try {
+            const { data, error } = await supabase
+                .from("agendamentos")
+                .select("*")
+                .eq("id", id)
+                .single();
+
+            if (error) throw error;
+            if (data) {
+                setAg(data);
+                if (data.relatorio_vivencia) {
+                    setCategoria(data.relatorio_vivencia.categoria || 'adulto');
+                    setNotas(data.relatorio_vivencia.notas || {});
+                    setAnalise(data.relatorio_vivencia.traducao || '');
+                    setRecomendacaoAuto(data.relatorio_vivencia.recomendacao_auto || '');
+                    setProgManual(data.relatorio_vivencia.recomendacao_manual || '');
+                }
             }
+        } catch (err) {
+            console.error("Erro ao carregar ficha:", err);
         }
     }
 
     const handleNotaChange = (pergunta, valor) => {
         const novasNotas = { ...notas, [pergunta]: Number(valor) };
         setNotas(novasNotas);
-        
-        // Insight Automático
         const texto = INSIGHTS_RELATORIO[categoria][pergunta];
         let feedback = valor <= 2 ? texto.baixo : valor <= 4 ? texto.medio : texto.alto;
-        setAnalise(feedback);
-
-        // Lógica de Recomendação Automática
-        const valores = Object.values(novasNotas);
-        const media = valores.reduce((a, b) => a + b, 0) / valores.length;
-        setRecomendacaoAuto(media > 3.5 ? "Programa Crossfit" : "Programa Strong + Cardio");
+        if (!analise.includes(feedback)) setAnalise(prev => prev + (prev ? " " : "") + feedback);
+        const valores = Object.values(novasNotas).filter(v => v > 0);
+        const media = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
+        setRecomendacaoAuto(media > 3.8 ? "Programa Crossfit" : "Programa Strong + Cardio");
     };
 
     async function salvarRelatorio() {
-        const payload = { 
-            categoria, 
-            notas, 
-            traducao: analise, 
-            recomendacao_auto: recomendacaoAuto,
-            recomendacao_manual: progManual 
-        };
+        const { data: { user } } = await supabase.auth.getUser();
+        const payload = { categoria, notas, traducao: analise, recomendacao_auto: recomendacaoAuto, recomendacao_manual: progManual, avaliado_por: user?.id, data_avaliacao: new Date().toISOString() };
         const { error } = await supabase.from("agendamentos").update({ relatorio_vivencia: payload }).eq("id", id);
         if (!error) alert("Relatório salvo com sucesso!");
     }
+
+    const enviarRelatorioWhats = () => {
+        const programaFinal = progManual || recomendacaoAuto;
+        let texto = `*RELATÓRIO DE VIVÊNCIA - KABUTO*%0A-----------------------------------%0A*Aluno:* ${ag.aluno_nome}%0A*Avaliação:* ${categoria.toUpperCase()}%0A%0A*DESEMPENHO TÉCNICO:*%0A`;
+        Object.keys(INSIGHTS_RELATORIO[categoria]).forEach(k => { if (notas[k] > 0) { texto += `• ${INSIGHTS_RELATORIO[categoria][k]?.label}: ${"⭐".repeat(notas[k])} (${notas[k]}/5)%0A`; } });
+        texto += `%0A*ANÁLISE DO COACH:*%0A_${analise}_%0A%0A*PROGRAMA RECOMENDADO:*%0A🚀 *${programaFinal}*%0A%0A-----------------------------------%0A_Parabéns pelo treino! Vamos começar sua jornada?_`;
+        window.open(linkWhatsApp(ag.aluno_whatsapp, texto), '_blank');
+    };
 
     async function alterarStatus(novoStatus) {
         await supabase.from("agendamentos").update({ status: novoStatus }).eq("id", id);
         fetchDados();
     }
 
-    const enviarRelatorioWhats = () => {
-        let texto = `*RELATÓRIO TÉCNICO - KABUTO*%0A%0A`;
-        texto += `*Aluno:* ${ag.aluno_nome}%0A`;
-        texto += `*Avaliação:* ${categoria.toUpperCase()}%0A%0A`;
-        
-        // Adiciona notas que foram preenchidas
-        Object.keys(notas).forEach(k => {
-            if (notas[k] > 0) {
-                const label = INSIGHTS_RELATORIO[categoria][k]?.label;
-                texto += `- ${label}: ${notas[k]}/5%0A`;
-            }
-        });
-
-        texto += `%0A*Análise do Coach:*%0A_${analise}_%0A%0A`;
-        texto += `*PROGRAMA SUGERIDO:*%0A🚀 *${progManual || recomendacaoAuto}*`;
-
-        window.open(linkWhatsApp(ag.aluno_whatsapp, texto), '_blank');
-    };
-
-    if (!ag) return <div className="p-20">Carregando ficha...</div>;
+    if (!ag) return <div style={{padding: '50px', textAlign: 'center', background: '#f8fafc', height: '100vh'}}>Carregando ficha do aluno...</div>;
 
     const formRaw = ag.form_raw ? (typeof ag.form_raw === 'string' ? JSON.parse(ag.form_raw) : ag.form_raw) : {};
 
     return (
-        <div className="dashboard-container">
-            <header className="topbar-dashboard">
-                <button onClick={() => navigate(-1)} className="link-voltar" style={{background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px'}}>
-                    <ArrowLeft size={18} /> Voltar
+        <div className="detail-page-wrapper" style={{ background: '#f8fafc', minHeight: '100vh', width: '100%' }}>
+            
+            {/* Header Desktop/Mobile */}
+            <header style={{ padding: '15px 25px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <button onClick={() => navigate(-1)} style={{ background: '#f1f5f9', border: 'none', padding: '10px', borderRadius: '50%', cursor: 'pointer', display: 'flex' }}>
+                    <ArrowLeft size={20} color="#400c88" />
                 </button>
+                <h2 style={{ margin: 0, fontSize: '18px', color: '#1e293b' }}>Ficha de Vivência Técnica</h2>
             </header>
 
-            <section className="profile-header-card">
-                <div className="profile-info">
+            <main style={{ padding: '25px', maxWidth: '1400px', margin: '0 auto' }}>
+                
+                {/* Perfil do Aluno */}
+                <section style={{ background: '#fff', padding: '25px', borderRadius: '16px', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                     <div>
-                        <h1>{ag.aluno_nome}</h1>
-                        <div className="profile-meta">
-                            <Calendar size={14} /> {formatarDataBR(ag.data_aula)}
-                            <span className="dot-separator">•</span>
-                            <MessageCircle size={14} /> {ag.aluno_whatsapp}
+                        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>{ag.aluno_nome}</h1>
+                        <div style={{ display: 'flex', gap: '20px', marginTop: '8px', color: '#64748b' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={16} /> {formatarDataBR(ag.data_aula)}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Smartphone size={16} /> {ag.aluno_whatsapp}</span>
                         </div>
                     </div>
-                </div>
-                <div className="profile-status">
-                    <span className={`status-pill status-${ag.status}`}>{ag.status?.toUpperCase()}</span>
-                </div>
-            </section>
+                    <div style={{ padding: '8px 20px', borderRadius: '30px', fontWeight: '800', fontSize: '12px', background: ag.status === 'confirmado' ? '#dcfce7' : '#fee2e2', color: ag.status === 'confirmado' ? '#166534' : '#991b1b' }}>
+                        {ag.status?.toUpperCase()}
+                    </div>
+                </section>
 
-            <div className="dashboard-grid">
-                {/* Coluna Esquerda: Questionário */}
-                <div className="col-left">
-                    <div className="card">
-                        <h3><FileText size={18} /> Questionário Inicial</h3>
-                        <div className="lista-detalhes-vertical">
+                {/* Grid de Conteúdo */}
+                <div className="detail-grid">
+                    
+                    {/* Coluna 1: Questionário (Esquerda) */}
+                    <div className="grid-col questionario-col">
+                        <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', height: '100%', border: '1px solid #e2e8f0' }}>
+                            <h3 style={{ fontSize: '16px', marginBottom: '20px', color: '#400c88', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <FileText size={18} /> Respostas do Cadastro
+                            </h3>
                             {Object.entries(formRaw).map(([key, val]) => (
-                                <div key={key} style={{marginBottom: '10px', padding: '8px', background: '#f8fafc', borderRadius: '8px'}}>
-                                    <small style={{color: 'var(--primario)', fontWeight: 800, fontSize: '10px', textTransform: 'uppercase'}}>{key}</small>
-                                    <p style={{margin: 0, fontSize: '14px', fontWeight: '500'}}>{Array.isArray(val) ? val.join(', ') : val}</p>
+                                <div key={key} style={{ marginBottom: '15px', padding: '12px', background: '#f8fafc', borderRadius: '10px' }}>
+                                    <label style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>{key}</label>
+                                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#334155' }}>{Array.isArray(val) ? val.join(', ') : val}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </div>
 
-                {/* Coluna Central: Avaliação do Coach */}
-                <div className="col-center">
-                    <div className="card card-main-display">
-                        <div className="card-header">
-                            <h3><Dumbbell size={18} /> Avaliação Técnica</h3>
-                            <div className="toggle-buttons">
-                                <button className={`btn-toggle ${categoria === 'adulto' ? 'active' : ''}`} onClick={() => setCategoria('adulto')}>Adulto</button>
-                                <button className={`btn-toggle ${categoria === 'kids' ? 'active' : ''}`} onClick={() => setCategoria('kids')}>Kids</button>
-                            </div>
-                        </div>
-
-                        <div className="grid-notas">
-                            {Object.keys(INSIGHTS_RELATORIO[categoria]).map(key => (
-                                <div key={key} style={{marginBottom: '10px'}}>
-                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>{INSIGHTS_RELATORIO[categoria][key].label}</label>
-                                    <select 
-                                        className="filtro__select"
-                                        value={notas[key] || 0}
-                                        onChange={(e) => handleNotaChange(key, e.target.value)}
-                                    >
-                                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}/5</option>)}
-                                    </select>
+                    {/* Coluna 2: Avaliação (Centro) */}
+                    <div className="grid-col avaliacao-col">
+                        <div style={{ background: '#fff', padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                                <h3 style={{ fontSize: '16px', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}><Dumbbell size={20} /> Avaliação do Professor</h3>
+                                <div style={{ background: '#f1f5f9', padding: '4px', borderRadius: '10px', display: 'flex' }}>
+                                    <button onClick={() => setCategoria('adulto')} style={{ border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', background: categoria === 'adulto' ? '#400c88' : 'transparent', color: categoria === 'adulto' ? '#fff' : '#64748b' }}>Adulto</button>
+                                    <button onClick={() => setCategoria('kids')} style={{ border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', background: categoria === 'kids' ? '#400c88' : 'transparent', color: categoria === 'kids' ? '#fff' : '#64748b' }}>Kids</button>
                                 </div>
-                            ))}
-                        </div>
-
-                        <textarea 
-                            value={analise}
-                            onChange={(e) => setAnalise(e.target.value)}
-                            placeholder="Descreva a análise técnica do aluno..."
-                            rows={4}
-                            style={{width: '100%', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0', fontFamily: 'inherit'}}
-                        />
-
-                        <div className="rec-box" style={{background: '#fffbeb', border: '1px solid #fef3c7', padding: '15px', borderRadius: '12px', marginTop: '15px'}}>
-                            <p style={{margin: 0, fontSize: '11px', fontWeight: '800', color: '#92400e'}}>PROGRAMA SUGERIDO (MANUAL)</p>
-                            <select 
-                                className="filtro__select" 
-                                style={{width: '100%', marginTop: '8px', fontWeight: 'bold', border: '1px solid #fde68a'}}
-                                value={progManual || recomendacaoAuto}
-                                onChange={(e) => setProgManual(e.target.value)}
-                            >
-                                <option value="">Selecione o programa...</option>
-                                {PROGRAMAS_KABUTO.map(p => <option key={p} value={p}>{p}</option>)}
-                            </select>
-                            <small style={{display:'block', marginTop:'5px', color:'#b45309'}}>Sugestão automática: {recomendacaoAuto}</small>
-                        </div>
-
-                        <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
-                            <button className="btn btn--primario" style={{flex: 1}} onClick={salvarRelatorio}>
-                                <Save size={18} /> Salvar Ficha
-                            </button>
-                            <button className="btn btn--whatsapp" style={{flex: 1, backgroundColor: '#25d366', color: 'white'}} onClick={enviarRelatorioWhats}>
-                                <Smartphone size={18} /> Enviar Relatório
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Coluna Direita: Gestão Admin */}
-                <div className="col-right">
-                    <div className="card highlight-card" style={{background: '#400c88', color: 'white'}}>
-                        <h3>Gestão Admin</h3>
-                        <div className="acoes-buttons-stack" style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                            <a href={linkWhatsApp(ag.aluno_whatsapp)} target="_blank" className="btn btn--whatsapp" style={{backgroundColor: '#25d366', color: 'white', textDecoration: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '10px', borderRadius: '10px'}}>
-                                <MessageCircle size={18} /> WhatsApp Aluno
-                            </a>
-                            <div className="row-buttons" style={{display: 'flex', gap: '8px'}}>
-                                <button className="btn btn--ok" style={{flex: 1, backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '10px', borderRadius: '10px'}} onClick={() => alterarStatus('confirmado')}>
-                                    <CheckCircle size={16} /> Confirmar
-                                </button>
-                                <button className="btn btn--erro" style={{flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '10px', borderRadius: '10px'}} onClick={() => alterarStatus('faltou')}>
-                                    <XCircle size={16} /> Faltou
-                                </button>
                             </div>
-                            
-                            <label className="check-recepcao-styled" style={{display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '10px', cursor: 'pointer'}}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={ag.matriculado} 
-                                    onChange={async (e) => {
-                                        const val = e.target.checked;
-                                        await supabase.from("agendamentos").update({ matriculado: val }).eq("id", id);
-                                        fetchDados();
-                                    }}
-                                /> 
-                                <span style={{fontSize: '13px', fontWeight: 'bold'}}>Aluno Matriculado?</span>
-                            </label>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                {Object.keys(INSIGHTS_RELATORIO[categoria]).map(key => (
+                                    <div key={key}>
+                                        <label style={{ fontSize: '12px', fontWeight: '700', display: 'block', marginBottom: '6px', color: '#475569' }}>{INSIGHTS_RELATORIO[categoria][key].label}</label>
+                                        <select value={notas[key] || 0} onChange={(e) => handleNotaChange(key, e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff' }}>
+                                            {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}/5 Estrelas</option>)}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <label style={{ fontSize: '12px', fontWeight: '700', display: 'block', marginBottom: '6px', color: '#475569' }}>Observações Técnicas</label>
+                            <textarea value={analise} onChange={(e) => setAnalise(e.target.value)} placeholder="Como foi o desempenho do aluno?" style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #cbd5e1', minHeight: '100px', marginBottom: '25px', resize: 'none', fontFamily: 'inherit' }} />
+
+                            <div style={{ background: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd', marginBottom: '25px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', marginBottom: '10px' }}><Star size={16} fill="#0369a1" /> Prescrição de Treino</label>
+                                <select value={progManual || recomendacaoAuto} onChange={(e) => setProgManual(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #0ea5e9', fontWeight: '700', color: '#0369a1' }}>
+                                    <option value="">Selecione o programa...</option>
+                                    {PROGRAMAS_KABUTO.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={salvarRelatorio} style={{ flex: 1, padding: '16px', borderRadius: '12px', border: 'none', background: '#400c88', color: '#fff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Save size={20}/> Salvar Ficha</button>
+                                <button onClick={enviarRelatorioWhats} style={{ flex: 1, padding: '16px', borderRadius: '12px', border: 'none', background: '#25d366', color: '#fff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><MessageCircle size={20}/> WhatsApp</button>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Coluna 3: Ações Admin (Direita) */}
+                    <div className="grid-col admin-col">
+                        <div style={{ background: '#400c88', padding: '25px', borderRadius: '16px', color: '#fff' }}>
+                            <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>Ações Administrativas</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={() => alterarStatus('confirmado')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><CheckCircle size={18}/> Presente</button>
+                                    <button onClick={() => alterarStatus('faltou')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><XCircle size={18}/> Faltou</button>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '12px', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={ag.matriculado} onChange={async (e) => { await supabase.from("agendamentos").update({ matriculado: e.target.checked }).eq("id", id); fetchDados(); }} style={{ width: '20px', height: '20px' }} />
+                                    <span style={{ fontWeight: '700', fontSize: '14px' }}>Matrícula Efetuada</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-            </div>
+            </main>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .detail-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1.5fr 1fr;
+                    gap: 25px;
+                    align-items: start;
+                }
+
+                @media (max-width: 1200px) {
+                    .detail-grid {
+                        grid-template-columns: 1fr 1fr;
+                    }
+                    .admin-col { grid-column: span 2; }
+                }
+
+                @media (max-width: 800px) {
+                    .detail-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    .admin-col, .questionario-col, .avaliacao-col { grid-column: span 1; }
+                    .admin-col { order: -1; } /* Ações Admin aparecem primeiro no mobile */
+                }
+            `}} />
         </div>
     );
 }
